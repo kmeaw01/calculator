@@ -1,0 +1,215 @@
+---
+import Display from './Display.astro';
+import Button from './Button.astro';
+---
+
+<div class="calculator-container">
+  <div class="calculator">
+    <Display />
+    <div class="keypad">
+      <Button value="C" type="clear" />
+      <Button value="⌫" type="backspace" />
+      <Button value="%" type="operator" />
+      <Button value="÷" type="operator" />
+      
+      <Button value="7" type="number" />
+      <Button value="8" type="number" />
+      <Button value="9" type="number" />
+      <Button value="×" type="operator" />
+      
+      <Button value="4" type="number" />
+      <Button value="5" type="number" />
+      <Button value="6" type="number" />
+      <Button value="-" type="operator" />
+      
+      <Button value="1" type="number" />
+      <Button value="2" type="number" />
+      <Button value="3" type="number" />
+      <Button value="+" type="operator" />
+      
+      <Button value="0" type="number" />
+      <Button value="." type="decimal" />
+      <Button value="=" type="equals" span="2" />
+    </div>
+  </div>
+</div>
+
+<style>
+  .calculator-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(45deg, #0f172a, #1e293b);
+  }
+
+  .calculator {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    width: 350px;
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+
+<script>
+  class Calculator {
+    constructor() {
+      this.displayValue = '0';
+      this.firstOperand = null;
+      this.operator = null;
+      this.waitingForSecondOperand = false;
+    }
+
+    updateDisplay() {
+      document.querySelector('.display').textContent = this.displayValue;
+    }
+
+    inputDigit(digit) {
+      if (this.waitingForSecondOperand) {
+        this.displayValue = digit;
+        this.waitingForSecondOperand = false;
+      } else {
+        this.displayValue = this.displayValue === '0' ? digit : this.displayValue + digit;
+      }
+    }
+
+    inputDecimal() {
+      if (this.waitingForSecondOperand) {
+        this.displayValue = '0.';
+        this.waitingForSecondOperand = false;
+        return;
+      }
+
+      if (!this.displayValue.includes('.')) {
+        this.displayValue += '.';
+      }
+    }
+
+    handleOperator(nextOperator) {
+      const inputValue = parseFloat(this.displayValue);
+
+      if (this.operator && this.waitingForSecondOperand) {
+        this.operator = nextOperator;
+        return;
+      }
+
+      if (this.firstOperand === null && !isNaN(inputValue)) {
+        this.firstOperand = inputValue;
+      } else if (this.operator) {
+        const result = this.calculate(this.firstOperand, inputValue, this.operator);
+        this.displayValue = `${parseFloat(result.toFixed(7))}`;
+        this.firstOperand = result;
+      }
+
+      this.waitingForSecondOperand = true;
+      this.operator = nextOperator;
+    }
+
+    calculate(firstOperand, secondOperand, operator) {
+      switch (operator) {
+        case '+':
+          return firstOperand + secondOperand;
+        case '-':
+          return firstOperand - secondOperand;
+        case '×':
+          return firstOperand * secondOperand;
+        case '÷':
+          return secondOperand !== 0 ? firstOperand / secondOperand : 'Error';
+        case '%':
+          return (firstOperand / 100) * secondOperand;
+        default:
+          return secondOperand;
+      }
+    }
+
+    clear() {
+      this.displayValue = '0';
+      this.firstOperand = null;
+      this.operator = null;
+      this.waitingForSecondOperand = false;
+    }
+
+    backspace() {
+      this.displayValue = this.displayValue.toString().slice(0, -1);
+      if (this.displayValue === '') {
+        this.displayValue = '0';
+      }
+    }
+  }
+
+  const calculator = new Calculator();
+
+  // Event Listeners
+  document.querySelectorAll('.calculator-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const { type, value } = button.dataset;
+
+      switch (type) {
+        case 'number':
+          calculator.inputDigit(value);
+          break;
+        case 'operator':
+          calculator.handleOperator(value);
+          break;
+        case 'decimal':
+          calculator.inputDecimal();
+          break;
+        case 'equals':
+          calculator.handleOperator('=');
+          break;
+        case 'clear':
+          calculator.clear();
+          break;
+        case 'backspace':
+          calculator.backspace();
+          break;
+      }
+
+      calculator.updateDisplay();
+    });
+  });
+
+  // Keyboard Support
+  document.addEventListener('keydown', (event) => {
+    const key = event.key;
+    
+    if (/[0-9]/.test(key)) {
+      calculator.inputDigit(key);
+    } else if (key === '.') {
+      calculator.inputDecimal();
+    } else if (['+', '-', '*', '/', '%'].includes(key)) {
+      const operatorMap = { '*': '×', '/': '÷' };
+      calculator.handleOperator(operatorMap[key] || key);
+    } else if (key === 'Enter' || key === '=') {
+      calculator.handleOperator('=');
+    } else if (key === 'Backspace') {
+      calculator.backspace();
+    } else if (key === 'Escape') {
+      calculator.clear();
+    }
+
+    calculator.updateDisplay();
+  });
+</script>
